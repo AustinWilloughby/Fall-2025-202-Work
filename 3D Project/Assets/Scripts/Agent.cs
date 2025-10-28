@@ -11,6 +11,8 @@ public abstract class Agent : MonoBehaviour
     [SerializeField]
     protected float maxSpeed;
 
+    public Vector3 Velocity { get { return velocity; } }
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();

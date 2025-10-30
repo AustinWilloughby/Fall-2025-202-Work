@@ -11,7 +11,10 @@ public abstract class Agent : MonoBehaviour
     [SerializeField]
     protected float maxSpeed;
 
+    protected Vector3 wanderTarget;
+
     public Vector3 Velocity { get { return velocity; } }
+
 
     void Awake()
     {
@@ -83,5 +86,27 @@ public abstract class Agent : MonoBehaviour
     protected Vector3 Evade(Agent target, float timeInSeconds)
     {
         return Flee(target.GetFuturePosition(timeInSeconds));
+    }
+
+    protected Vector3 Wander(float wanderRadius, float wanderDistance, float wanderJitter)
+    {
+        if(wanderTarget == Vector3.zero)
+        {
+            wanderTarget = Random.insideUnitSphere.normalized * wanderRadius;
+        }
+
+        wanderJitter *= Time.deltaTime;
+        wanderTarget += new Vector3(
+            Random.Range(-1f, 1f) * wanderJitter,
+            Random.Range(-1f, 1f) * wanderJitter,
+            Random.Range(-1f, 1f) * wanderJitter
+        );
+
+        wanderTarget = wanderTarget.normalized * wanderRadius;
+
+        Vector3 targetInWorldSpace = transform.position +
+            (velocity.normalized * wanderDistance) + wanderTarget;
+
+        return Seek(targetInWorldSpace); 
     }
 }

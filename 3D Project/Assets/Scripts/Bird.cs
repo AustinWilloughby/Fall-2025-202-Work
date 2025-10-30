@@ -17,6 +17,24 @@ public class Bird : Agent
     [SerializeField, Range(0f, 10.0f)]
     float separateDistance = 1;
 
+    [SerializeField, Range(0f, 10.0f)]
+    float wanderRadius = 1;
+
+    [SerializeField, Range(0f, 10.0f)]
+    float wanderDistance = 2;
+
+    [SerializeField, Range(0f, 10.0f)]
+    float wanderJitter = 1;
+
+    [SerializeField, Range(0f, 10.0f)]
+    float wanderWeight = 1;
+
+    [SerializeField]
+    BoxCollider worldBounds;
+
+    [SerializeField, Range(0f, 1f)]
+    float stayInBoundsWeight;
+
     protected override Vector3 CalcSteering()
     {
         Vector3 totalForce = Vector3.zero;
@@ -24,6 +42,18 @@ public class Bird : Agent
         totalForce += Cohesion() * cohesionWeight;
         totalForce += Alignment() * alignmentWeight;
         totalForce += Separate(separateDistance) * separateWeight;
+        totalForce += Wander(wanderRadius, wanderDistance, wanderJitter) * wanderWeight;
+
+        Vector3 futurePos = GetFuturePosition(1);
+        if (futurePos.x > worldBounds.transform.position.x + (worldBounds.size.x / 2) ||
+           futurePos.x < worldBounds.transform.position.x - (worldBounds.size.x / 2) ||
+           futurePos.y > worldBounds.transform.position.y + (worldBounds.size.y / 2) ||
+           futurePos.y < worldBounds.transform.position.y - (worldBounds.size.y / 2) ||
+           futurePos.z > worldBounds.transform.position.z + (worldBounds.size.z / 2) ||
+           futurePos.z < worldBounds.transform.position.z - (worldBounds.size.z / 2))
+        {
+            totalForce += Seek(worldBounds.transform.position) * stayInBoundsWeight;
+        }
 
         return totalForce;
     }
@@ -57,6 +87,17 @@ public class Bird : Agent
         }
 
         return separateForce.normalized * maxSpeed;
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.white;
+        Gizmos.DrawWireSphere(transform.position +
+            (Velocity.normalized * wanderDistance), wanderRadius);
+
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawLine(transform.position, transform.position +
+            (Velocity.normalized * wanderDistance) + wanderTarget);
     }
 }
 

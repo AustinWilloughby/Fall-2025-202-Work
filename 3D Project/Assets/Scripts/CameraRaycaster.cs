@@ -9,10 +9,10 @@ public class CameraRaycaster : MonoBehaviour
     {
         if (!ctx.performed) return;
 
-        Ray myRay = Camera.main.ScreenPointToRay(Mouse.current.position.value);
+        //Ray myRay = Camera.main.ScreenPointToRay(Mouse.current.position.value);
 
         RaycastHit hit;
-        if(Physics.Raycast(myRay, out hit, Mathf.Infinity, interactLayers))
+        if(Physics.Raycast(transform.position, transform.forward, out hit, Mathf.Infinity, interactLayers))
         {
             Debug.Log(hit.collider.gameObject.name);
         }

@@ -2,21 +2,24 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody))]
-public class CharacterController : MonoBehaviour
+public class MyCharacterController : MonoBehaviour
 {
     [SerializeField] float lookSpeed = 100f;
     [SerializeField] float moveSpeed = 5f;
     [SerializeField] Vector2 lookSensitivity = new Vector2(1, 1);
     [SerializeField] LayerMask groundMask;
     [SerializeField] float groundingOffset = 1.0f;
+    [SerializeField] float jumpForce = 100f;
 
     Vector2 moveInput;
 
     Camera myCamera;
     Rigidbody rb;
+    bool grounded;
 
     void Start()
     {
+        grounded = true;
         rb = GetComponent<Rigidbody>();
         myCamera = GetComponentInChildren<Camera>();
         Cursor.lockState = CursorLockMode.Locked;
@@ -25,17 +28,23 @@ public class CharacterController : MonoBehaviour
     private void FixedUpdate()
     {
         rb.angularVelocity = Vector3.zero;
-        rb.linearVelocity = Vector3.zero;
 
         Vector3 pos = transform.position;
 
         pos += transform.forward * moveInput.y * moveSpeed * Time.fixedDeltaTime;
         pos += transform.right * moveInput.x * moveSpeed * Time.fixedDeltaTime;
 
-        RaycastHit hit;
-        if(Physics.Raycast(pos, -transform.up, out hit, Mathf.Infinity, groundMask))
+        if (grounded)
         {
-            pos.y = hit.point.y + groundingOffset;
+            rb.linearVelocity = Vector3.zero;
+
+            RaycastHit hit;
+            if (Physics.Raycast(pos, -transform.up, out hit, Mathf.Infinity, groundMask))
+            {
+                pos = hit.point;
+                pos.y += groundingOffset;
+                //pos.y = hit.point.y + groundingOffset;
+            }
         }
 
         rb.MovePosition(pos);
@@ -44,6 +53,15 @@ public class CharacterController : MonoBehaviour
     public void OnMove(InputAction.CallbackContext ctx)
     {
         moveInput = ctx.ReadValue<Vector2>();
+    }
+
+    public void OnJump(InputAction.CallbackContext ctx)
+    {
+        if(ctx.performed && grounded)
+        {
+            grounded = false;
+            rb.AddForce(transform.up * jumpForce);
+        }
     }
 
     public void OnLook(InputAction.CallbackContext ctx)
@@ -59,9 +77,28 @@ public class CharacterController : MonoBehaviour
         
         if(lookInput.y != 0f)
         {
-            myCamera.transform.Rotate(
-                lookSpeed * Time.deltaTime * lookInput.y * lookSensitivity.y,
-                0, 0);
+            float xAngle = myCamera.transform.rotation.eulerAngles.x;
+            if(xAngle > 180)
+            {
+                xAngle -= 360;
+            }
+
+            xAngle += lookSpeed * Time.deltaTime * lookInput.y * lookSensitivity.y;
+            xAngle = Mathf.Clamp(xAngle, -89, 89);
+
+            myCamera.transform.rotation = Quaternion.Euler(
+                xAngle,
+                myCamera.transform.rotation.eulerAngles.y,
+                myCamera.transform.rotation.eulerAngles.z
+            );
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if((groundMask & (1 << collision.gameObject.layer)) != 0)
+        {
+            grounded = true;
         }
     }
 }

@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
+using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class CharacterController : MonoBehaviour
 {
@@ -13,6 +15,9 @@ public class CharacterController : MonoBehaviour
     float moveSpeed = 5f;
 
     [SerializeField]
+    float jumpForce = 100f;
+
+    [SerializeField]
     LayerMask groundLayer;
 
     [SerializeField]
@@ -22,9 +27,11 @@ public class CharacterController : MonoBehaviour
 
     Vector2 moveInput;
     Rigidbody rb;
+    bool grounded;
 
     void Start()
     {
+        grounded = true;
         myCamera = GetComponentInChildren<Camera>();
         rb = GetComponent<Rigidbody>();
         Cursor.lockState = CursorLockMode.Locked;
@@ -37,16 +44,20 @@ public class CharacterController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        rb.linearVelocity = Vector3.zero;
         Vector3 pos = transform.position;
         pos += transform.forward * moveInput.y * moveSpeed * Time.fixedDeltaTime;
         pos += transform.right * moveInput.x * moveSpeed * Time.fixedDeltaTime;
 
-        RaycastHit hit;
-        if(Physics.Raycast(pos, -transform.up, out hit, Mathf.Infinity, groundLayer))
+        if (grounded)
         {
-            pos = hit.point;
-            pos.y += yOffset;
+            rb.linearVelocity = Vector3.zero;
+
+            RaycastHit hit;
+            if (Physics.Raycast(pos, -transform.up, out hit, Mathf.Infinity, groundLayer))
+            {
+                pos = hit.point;
+                pos.y += yOffset;
+            }
         }
 
         rb.MovePosition(pos);
@@ -55,6 +66,15 @@ public class CharacterController : MonoBehaviour
     public void OnMove(InputAction.CallbackContext ctx)
     {
         moveInput = ctx.ReadValue<Vector2>();
+    }
+
+    public void OnJump(InputAction.CallbackContext ctx)
+    {
+        if(ctx.performed && grounded)
+        {
+            grounded = false;
+            rb.AddForce(Vector3.up * jumpForce); 
+        }
     }
 
     public void OnLook(InputAction.CallbackContext ctx)
@@ -70,13 +90,27 @@ public class CharacterController : MonoBehaviour
 
         if (lookInput.y != 0)
         {
-            if (transform.rotation.eulerAngles.x < 89
-                || transform.rotation.eulerAngles.x > 271)
+            float xAngle = myCamera.transform.rotation.eulerAngles.x;
+            if(xAngle > 180)
             {
-                myCamera.transform.Rotate(
-                    lookInput.y * Time.deltaTime * lookSpeed * mouseSensitivity.y,
-                    0, 0);
+                xAngle -= 360;
             }
+
+            xAngle += lookInput.y * Time.deltaTime * lookSpeed * mouseSensitivity.y;
+            xAngle = Mathf.Clamp(xAngle, -89, 89);
+
+            myCamera.transform.rotation = Quaternion.Euler(
+                xAngle, 
+                myCamera.transform.rotation.eulerAngles.y, 
+                myCamera.transform.rotation.eulerAngles.z);
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if ((groundLayer & (1 << collision.gameObject.layer)) != 0)
+        {
+            grounded = true;
         }
     }
 }
